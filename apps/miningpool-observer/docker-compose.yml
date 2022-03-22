@@ -1,0 +1,43 @@
+version: "3.7"
+
+services:
+  mpo-web:
+    image: b10c/miningpool-observer:web-latest
+    restart: on-failure
+    stop_grace_period: 1m
+    depends_on: [ mpo-postgres, mpo-daemon ]
+    ports:
+      - 45324:45324
+    environment:
+      - CREATE_CONFIG_FROM_ENVVARS: 1
+      - DATABASE_URL: "postgres://miningpoolobserver@127.0.0.1/miningpoolobserver"
+      - BASE_URL: "http://$APP_HIDDEN_SERVICE"
+      - LOG_LEVEL: "info"
+      - ADDRESS: "0.0.0.0:45324"
+      - SITE_TITLE: "miningpool-observer"
+      - SITE_FOOTER: |-
+        <div class="my-2">
+          <span class="text-muted">miningpool-observer on Umbrel</span>
+        </div>
+  mpo-daemon:
+    image: b10c/miningpool-observer:daemon-latest
+    restart: on-failure
+    stop_grace_period: 1m
+    depends_on: [ mpo-postgres ]
+    environment:
+      - CREATE_CONFIG_FROM_ENVVARS: 1
+      - DATABASE_URL: "postgres://miningpoolobserver@mpo-postgres/miningpoolobserver"
+      - LOG_LEVEL: "info"
+      - RPC_HOST: "$BITCOIN_IP"
+      - RPC_PORT: "$BITCOIN_RPC_PORT"
+      - RPC_USER: "$BITCOIN_RPC_USER"
+      - RPC_PASSWORD: "$BITCOIN_RPC_PASS"
+      - PROMETHEUS_ENABLE: "false"
+  mpo-postgres:
+    image: postgres:9.6.20@sha256:82c335ccb6b60941cb860cbb8252c12f63fd3e27a0d15bce5bc6de110c02a2b4
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+        POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+        - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
